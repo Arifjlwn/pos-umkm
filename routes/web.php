@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\StoreController;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -11,66 +12,60 @@ use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Models\Product;
 
-
-
+// Rute awal langsung arahkan ke login saja biar tidak bingung
 Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+    return redirect('/login');
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// --- SEMUA RUTE DI BAWAH INI WAJIB LOGIN ---
+Route::middleware(['auth', 'verified'])->group(function () {
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
+    // Rute Dashboard
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard');
+    })->name('dashboard');
 
-Route::get('/pos', function () {
-    return Inertia::render('Pos/Index', [
-        'products' => Product::all()
-    ]);
-});
+    // Rute Setup Toko
+    Route::get('/setup-toko', [StoreController::class, 'create'])->name('setup.toko');
+    Route::post('/setup-toko', [StoreController::class, 'store'])->name('setup.toko.store');
 
-Route::post('/pos/checkout', function (Request $request) {
-    // 1. Bungkus dengan DB Transaction agar aman (kalo error tengah jalan, data di rollback)
-    DB::transaction(function () use ($request) {
-
-        // 2. Simpan ke tabel master 'transactions'
-        $transaction = Transaction::create([
-            'total_price' => $request->total_price,
-            'pay_amount' => $request->pay_amount,
-            'payment_method' => $request->payment_method,
-            'return_amount' => $request->pay_amount - $request->total_price,
+    // 1. Rute POS
+    Route::get('/pos', function () {
+        return Inertia::render('Pos/Index', [
+            'products' => Product::all()
         ]);
+    })->name('pos');
 
-        // 3. Looping isi keranjang dan simpan ke 'transaction_details'
-        foreach ($request->cart as $item) {
-            TransactionDetail::create([
-                'transaction_id' => $transaction->id,
-                'product_id' => $item['id'],
-                'quantity' => $item['qty'],
-                'price' => $item['price'],
+    // 2. Rute Checkout Transaksi
+    Route::post('/pos/checkout', function (Request $request) {
+        DB::transaction(function () use ($request) {
+            $transaction = Transaction::create([
+                'total_price' => $request->total_price,
+                'pay_amount' => $request->pay_amount,
+                'payment_method' => $request->payment_method,
+                'return_amount' => $request->pay_amount - $request->total_price,
             ]);
 
-            // 4. Potong Stok barang otomatis
-            $product = Product::find($item['id']);
-            $product->decrement('stock', $item['qty']);
-        }
+            foreach ($request->cart as $item) {
+                TransactionDetail::create([
+                    'transaction_id' => $transaction->id,
+                    'product_id' => $item['id'],
+                    'quantity' => $item['qty'],
+                    'price' => $item['price'],
+                ]);
+
+                $product = Product::find($item['id']);
+                $product->decrement('stock', $item['qty']);
+            }
+        });
+        return redirect()->back();
     });
 
-    // 5. Kembalikan ke halaman awal dengan pesan sukses
-    return redirect()->back();
-});
+    // 3. Rute Produk
+    Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
+    Route::post('/products/import', [ProductController::class, 'import'])->name('products.import');
+    Route::resource('/products', ProductController::class);
 
-Route::get('/products/export', [ProductController::class, 'export']);
-Route::post('/products/import', [ProductController::class, 'import']);
-Route::resource('/products', ProductController::class);
+}); // Penutup middleware auth
 
 require __DIR__ . '/auth.php';
