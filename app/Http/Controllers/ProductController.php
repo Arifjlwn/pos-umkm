@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Response;
 use Illuminate\Database\QueryException;
 use Inertia\Inertia;
 
@@ -24,13 +25,15 @@ class ProductController extends Controller
         // Validasi Inputan
         $request->validate([
             'name' => 'required|string|max:255',
+            'sku' => 'nullable|string|max:100',
+            'category' => 'nullable|string|max:100',
+            'cost_price' => 'required|numeric',
             'price' => 'required|numeric',
             'stock' => 'required|numeric',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // Maks 2MB
         ]);
 
         $imagePath = null;
-
         // Cek apakah ada file di upload
         if ($request->hasFile('image')) {
             // Simpan ke folder 'storage/app/public/products'
@@ -42,6 +45,9 @@ class ProductController extends Controller
         // Masukan ke database
         Product::create([
             'name' => $request->name,
+            'sku' => $request->sku,
+            'category' => $request->category,
+            'cost_price' => $request->cost_price,
             'price' => $request->price,
             'stock' => $request->stock,
             'image' => $imagePath,
@@ -55,6 +61,9 @@ class ProductController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
+            'sku' => 'nullable|string|max:100',
+            'category' => 'nullable|string|max:100',
+            'cost_price' => 'required|numeric',
             'price' => 'required|numeric',
             'stock' => 'required|numeric',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // Maks 2MB
@@ -77,6 +86,9 @@ class ProductController extends Controller
         // Update data di database
         $product->update([
             'name' => $request->name,
+            'sku' => $request->sku,
+            'category' => $request->category,
+            'cost_price' => $request->cost_price,
             'price'=> $request->price,
             'stock' => $request->stock,
             'image' => $imagePath,
@@ -96,7 +108,7 @@ class ProductController extends Controller
             if ($product->image && str_starts_with($product->image, '/storage/')) {
                 Storage::disk('public')->delete(str_replace('/storage/', '', $product->image));
             }
-            
+
             return redirect()->back();
 
         } catch (QueryException $e) {
@@ -105,5 +117,80 @@ class ProductController extends Controller
                 'message' => 'GAGAL: Produk ini tidak bisa dihapus karena sudah tercatat di dalam riwayat transaksi (struk)!'
             ]);
         }
+    }
+
+    // Fungsi Export Produk ke CSV
+    public function export()
+    {
+        $fileName = 'master_produk_' . date('Y-m-d') . '.csv';
+        $products = Product::all();
+
+        $headers = [
+            "Content-Type" => "text/csv",
+            "Content-Disposition" => "attachment; filename=$fileName",
+            "Pragma" => "no-cache",
+            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+            "Expires" => "0"
+        ];
+
+        // Baris pertama (Header Kolom)
+        $columns = ['Nama Produk', 'SKU/Barcode', 'Kategori', 'HPP', 'Harga Jual', 'Stok'];
+
+        $callback = function() use($products, $columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns); // Tulis header ke file
+
+            foreach ($products as $product) {
+                // Tulis data per baris
+                fputcsv($file, [
+                    $product->name,
+                    $product->sku,
+                    $product->category,
+                    $product->cost_price,
+                    $product->price,
+                    $product->stock
+                ]);
+            }
+            fclose($file);
+        };
+        return Response::stream($callback, 200, $headers);
+    }
+
+    // --- FUNGSI IMPORT CSV ---
+    public function import(Request $request)
+    {
+        // Validasi file
+        $request->validate([
+            'file' => 'required|mimes:csv,txt'
+        ]);
+
+        $file = $request->file('file');
+
+        // Baca isi file
+        $fileContents = file($file->getPathname());
+
+        foreach ($fileContents as $key => $line) {
+            // Lewati baris pertama (karena itu Header kolom)
+            if ($key == 0) continue;
+
+            $data = str_getcsv($line);
+
+            // Pastikan baris tidak kosong
+            if (count($data) >= 6) {
+                // Logika Pintar: Cari berdasarkan SKU.
+                // Jika ketemu -> Update. Jika tidak -> Create baru.
+                Product::updateOrCreate(
+                    ['sku' => $data[1]], // Acuan pencarian (Barcode)
+                    [
+                        'name' => $data[0],
+                        'category' => $data[2],
+                        'cost_price' => $data[3],
+                        'price' => $data[4],
+                        'stock' => $data[5],
+                    ]
+                );
+            }
+        }
+        return redirect()->back();
     }
 }

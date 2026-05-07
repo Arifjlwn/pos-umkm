@@ -46,6 +46,7 @@ Route::post('/pos/checkout', function (Request $request) {
         $transaction = Transaction::create([
             'total_price' => $request->total_price,
             'pay_amount' => $request->pay_amount,
+            'payment_method' => $request->payment_method,
             'return_amount' => $request->pay_amount - $request->total_price,
         ]);
 
@@ -68,6 +69,8 @@ Route::post('/pos/checkout', function (Request $request) {
     return redirect()->back();
 });
 
-Route::resource('products', ProductController::class);
+Route::get('/products/export', [ProductController::class, 'export']);
+Route::post('/products/import', [ProductController::class, 'import']);
+Route::resource('/products', ProductController::class);
 
 require __DIR__ . '/auth.php';

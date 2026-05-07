@@ -10,4 +10,5 @@ class Transaction extends Model
     use HasFactory;
 
     protected $guarded = [];
+    protected $fillable = ['total_price', 'pay_amount', 'payment_method', 'return_amount'];
 }
