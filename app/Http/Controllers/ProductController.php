@@ -37,7 +37,10 @@ class ProductController extends Controller
 
         return inertia('Products/Index', [
             'products' => $products,
-            'filters' => $request->only(['search', 'category']), // Kirim juga filter yang sedang aktif
+            'filters' =>[
+                'search' => $request->search ?? '',
+                'category' => $request->category ?? ''
+                ],
             'categories' => $categories
         ]);
     }

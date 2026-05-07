@@ -53,6 +53,7 @@ const selectedCategory = ref(props.filters.category || '');
 let searchTimeOut;
 watch([searchQuery, selectedCategory], () => {
     clearTimeout(searchTimeOut);
+
     searchTimeOut = setTimeout(() => {
         router.get('/products', {
             search: searchQuery.value,
