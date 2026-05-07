@@ -8,39 +8,44 @@ use Inertia\Inertia;
 
 class StoreController extends Controller
 {
-    // Menampilkan halaman form Setup Toko
     public function create()
     {
         return Inertia::render('SetupToko');
     }
 
-    // Memproses data form yang dikirim user
     public function store(Request $request)
     {
-        // 1. Validasi inputan
+        // 1. Validasi Super Ketat (Termasuk File Gambar dan Array Fitur)
         $request->validate([
             'nama_toko' => 'required|string|max:255',
             'alamat_toko' => 'required|string',
             'telepon' => 'nullable|string|max:20',
+            'qris_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // Maksimal 2MB
+            'fitur_opsional' => 'required|array', // Harus berupa array dari Vue
         ]);
 
-        // 2. Simpan data toko ke database
+        // 2. Proses Upload QRIS (Kalau ada)
+        $qrisPath = null;
+        if ($request->hasFile('qris_image')) {
+            $qrisPath = $request->file('qris_image')->store('qris_merchants', 'public');
+        }
+
+        // 3. Simpan Data Toko
         $store = Store::create([
             'nama_toko' => $request->nama_toko,
             'alamat_toko' => $request->alamat_toko,
             'telepon' => $request->telepon,
-            // Kasih default fitur 'kasir' untuk awalan
-            'fitur_opsional' => ['kasir'],
+            'qris_image' => $qrisPath,
+            'fitur_opsional' => $request->fitur_opsional, // Tersimpan otomatis jadi JSON
         ]);
 
-        // 3. Update data User yang sedang login
-        // Ikatkan dia ke toko yang baru dibuat, dan pastikan jabatannya 'owner'
+        // 4. Ikatkan User sebagai 'Owner' di toko tersebut
         $request->user()->update([
             'store_id' => $store->id,
             'role' => 'owner'
         ]);
 
-        // 4. Buka gembok dan arahkan ke mesin POS!
+        // 5. Gas ke Kasir!
         return redirect()->route('pos');
     }
 }
