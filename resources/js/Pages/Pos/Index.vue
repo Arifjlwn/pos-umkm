@@ -192,19 +192,11 @@ const executeCheckout = () => {
 };
 
 // Proses bayar Utama
-const formattedPayAmount = computed({
-    get() {
-        // Saat nampil di layar: ubah angka jadi format lokal (ada titiknya)
-        // Kalau nilainya 0, tampilkan string kosong agar kasir gampang ngetik
-        return payAmount.value === 0 ? '' : payAmount.value.toLocaleString('id-ID');
-    },
-    set(newValue) {
-        // Saat kasir ngetik: bersihkan semua huruf/titik, sisakan angka murni saja
-        const cleanValue = String(newValue).replace(/\D/g, '');
-        // Simpan angka murninya ke variabel asli payAmount
-        payAmount.value = cleanValue ? parseInt(cleanValue, 10) : 0;
-    }
-});
+const formatInputRupiah = (event) => {
+    let rawValue = event.target.value.replace(/\D/g, '');
+    payAmount.value = rawValue ? parseInt(rawValue, 10) : 0;
+    event.target.value = payAmount.value === 0 ? '' : payAmount.value.toLocaleString('id-ID');
+}
 
 const processCheckout = () => {
     if (payAmount.value < totalBelanja.value) {
@@ -373,7 +365,14 @@ const printReceipt = () => {
 
                             <div class="flex justify-between items-center mb-2">
                                 <span class="font-semibold text-sm text-gray-600">Nominal Bayar</span>
-                                <input type="text" v-model.number="formattedPayAmount" :disabled="paymentMethod !== 'Cash'" :class="paymentMethod !== 'Cash' ? 'bg-gray-100 text-gray-500' : 'bg-white text-gray-800 focus:ring-blue-500 focus:border-blue-500'" class="w-32 text-right text-sm font-bold border-gray-300 rounded-md p-1 transition-colors" placeholder="0">
+                                <input
+                                    type="text"
+                                    :value="payAmount === 0 ? '' : payAmount.toLocaleString('id-ID')"
+                                    @input="formatInputRupiah"
+                                    :disabled="paymentMethod !== 'Cash'"
+                                    :class="paymentMethod !== 'Tunai' ? 'bg-gray-100 text-gray-500' : 'bg-white text-gray-800 focus:ring-blue-500 focus:border-blue-500'"
+                                    class="w-32 text-right text-sm font-bold border-gray-300 rounded-md p-1 transition-colors"
+                                    placeholder="0">
                             </div>
 
                             <div class="flex justify-between items-center mb-4 pt-2 border-t border-dashed border-gray-300">
