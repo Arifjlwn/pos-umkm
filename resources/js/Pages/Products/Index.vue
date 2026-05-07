@@ -1,10 +1,12 @@
 <script setup>
-import { computed, ref } from 'vue';
-import { Head, useForm, router } from '@inertiajs/vue3';
+import { ref, watch } from 'vue';
+import { Head, useForm, router, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({
-    products: Array,
+    products: Object,
+    filters: Object,
+    categories: Array,
 });
 
 // fileInput untuk Upload
@@ -45,24 +47,22 @@ const editId = ref(null);
 const showFormModal = ref(false);
 
 // Fungsi Seacrh & Filter
-const searchQuery = ref('');
-const selectedCategory = ref('');
+const searchQuery = ref(props.filters.search || '');
+const selectedCategory = ref(props.filters.category || '');
 
-// Mengambil daftar kategori unik dari data produk
-const uniqueCategories = computed(() => {
-    const categories = props.products.map(p => p.category).filter(Boolean);
-    return [...new Set(categories)];
-});
-
-// Menampilkan produk yang sudah di filter
-const filteredProducts = computed(() => {
-    return props.products.filter(product => {
-        const matchSearch = product.name.toLowerCase().includes(searchQuery.value.toLowerCase()) || (product.sku && product.sku.toLowerCase().includes(searchQuery.value.toLowerCase()));
-
-        const matchCategory = selectedCategory.value === '' || product.category === selectedCategory.value;
-
-        return matchSearch && matchCategory
-    });
+let searchTimeOut;
+watch([searchQuery, selectedCategory], () => {
+    clearTimeout(searchTimeOut);
+    searchTimeOut = setTimeout(() => {
+        router.get('/products', {
+            search: searchQuery.value,
+            category: selectedCategory.value
+        }, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true
+        });
+    }, 300);
 });
 
 const form = useForm({
@@ -202,7 +202,7 @@ const submitProduct = () => {
                         class="block w-full pl-10 pr-10 py-2.5 rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm font-medium text-gray-700 cursor-pointer appearance-none bg-white"
                     >
                         <option value="">Semua Kategori</option>
-                        <option v-for="cat in uniqueCategories" :key="cat" :value="cat">
+                        <option v-for="cat in categories" :key="cat" :value="cat">
                             {{ cat }}
                         </option>
                     </select>
@@ -223,7 +223,7 @@ const submitProduct = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="product in filteredProducts" :key="product.id" class="border-b border-gray-50 hover:bg-blue-50/30 transition-colors">
+                            <tr v-for="product in products.data" :key="product.id" class="border-b border-gray-50 hover:bg-blue-50/30 transition-colors">
                                 <td class="p-4 flex items-center gap-4">
                                     <img :src="product.image || 'https://placehold.co/100x100?text=No+Image'" class="w-12 h-12 object-contain p-1 rounded-lg border border-gray-200 bg-white shadow-sm shrink-0">
                                     <div>
@@ -251,7 +251,7 @@ const submitProduct = () => {
                                     </div>
                                 </td>
                             </tr>
-                            <tr v-if="filteredProducts.length === 0">
+                            <tr v-if="products.data.length === 0">
                                 <td colspan="6" class="p-12 text-center">
                                     <div class="text-4xl mb-3">📦</div>
                                     <div class="text-gray-500 font-medium">Belum ada data produk.</div>
@@ -260,6 +260,24 @@ const submitProduct = () => {
                             </tr>
                         </tbody>
                     </table>
+                    <div v-if="products.data.length > 0" class="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50">
+                    <div class="text-sm text-gray-500 font-medium">
+                        Menampilkan <span class="font-bold text-gray-800">{{ products.from }}</span> sampai <span class="font-bold text-gray-800">{{ products.to }}</span> dari <span class="font-bold text-blue-600">{{ products.total }}</span> data
+                    </div>
+                    <div class="flex gap-1 flex-wrap justify-center">
+                        <Link
+                            v-for="(link, index) in products.links"
+                            :key="index"
+                            :href="link.url || '#'"
+                            class="px-3.5 py-1.5 rounded-lg text-sm font-bold transition-colors shadow-sm"
+                            :class="[
+                                link.active ? 'bg-blue-600 text-white border border-blue-600' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100',
+                                !link.url ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''
+                            ]"
+                            v-html="link.label"
+                        ></Link>
+                    </div>
+                </div>
                 </div>
             </div>
 

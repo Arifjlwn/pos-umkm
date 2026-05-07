@@ -12,10 +12,33 @@ use Inertia\Inertia;
 class ProductController extends Controller
 {
     // Menampilkan Halaman Master Produk
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('Products/Index', [
-            'products' => Product::latest()->get()
+        // 1. Kerangka query ke tabel produk
+        $query = Product::query();
+
+        // 2. Jika ada pencarian dari kasir
+        if ($request->search) {
+            $query->where('name', 'like', '%' . $request->search . '%')
+                ->orWhere('sku', 'like', '%' . $request->search . '%');
+        }
+
+        // 3. Jika ada filter kategori
+        if ($request->category) {
+            $query->where('category', $request->category);
+        }
+
+        // 4. Ambil data, urutkan dari yang terbaru, dan potong 10 per halaman
+        // withQueryString() berguna agar saat pindah halaman 2, hasil pencariannya tidak hilang
+        $products = $query->latest()->paginate(10)->withQueryString();
+
+        // 5. Ambil daftar kategori yang unik langsung dari database untuk dropdown
+        $categories = Product::whereNotNull('category')->distinct()->pluck('category');
+
+        return inertia('Products/Index', [
+            'products' => $products,
+            'filters' => $request->only(['search', 'category']), // Kirim juga filter yang sedang aktif
+            'categories' => $categories
         ]);
     }
 
