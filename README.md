@@ -1,58 +1,62 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🚀 POS-UMKM (SaaS Point of Sale)
+Sistem Kasir berbasis web yang dirancang khusus untuk efisiensi operasional UMKM, dibangun menggunakan stack modern Laravel 12 dan Vue 3.
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+---
 
-## About Laravel
+## 🛠️ Tech Stack
+- **Framework:** Laravel 12
+- **Frontend:** Vue 3 (Composition API)
+- **State Management:** Inertia.js
+- **Styling:** Tailwind CSS
+- **Database:** MySQL
+- **Charts:** Chart.js (untuk Analitik Dashboard)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 📌 Fitur yang Sudah Selesai (DONE)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 🏗️ Arsitektur & Keamanan
+- **RBAC (Role Based Access Control):** Pembedaan akses antara **Owner** dan **Kasir**.
+- **Smart Redirect:** - Owner otomatis diarahkan ke Dashboard Analitik setelah login.
+  - Kasir otomatis diarahkan ke halaman Absensi setelah login.
+- **Store-Specific Data:** Filter data berdasarkan `store_id` agar data antar cabang/toko tidak bercampur.
 
-## Learning Laravel
+### 💰 Operasional Toko
+- **POS (Point of Sale):** Keranjang belanja dinamis, kalkulasi pembayaran, dan cetak struk.
+- **Master Produk:** Manajemen katalog barang lengkap dengan sistem **Barcode/SKU**.
+- **Mesin Absensi:** Sistem kehadiran karyawan mandiri dengan log waktu masuk dan pulang.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 📊 Administrasi & Analisis (Owner Only)
+- **Dashboard Analitik:** Visualisasi tren penjualan harian dan 5 produk paling laris (Fast Moving).
+- **Manajemen Karyawan:** Input data kasir otomatis menghasilkan NIK sebagai ID login.
+- **Export Data:** Fitur tarik laporan absensi dalam format CSV.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## 🚀 Rencana Pengembangan (TO-DO)
 
-## Agentic Development
+### 🏗️ Fase 1: Data Integrity
+- [ ] Sinkronisasi angka dashboard dengan data riil dari tabel `transactions`.
+- [ ] Implementasi Database Trigger/Logic untuk pengurangan stok otomatis saat checkout sukses.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### 📦 Fase 2: Inventori & Logistik
+- [ ] Fitur **Stock-In**: Pencatatan barang masuk dari supplier.
+- [ ] **Stock Alert**: Notifikasi di dashboard untuk produk dengan stok di bawah ambang batas (Stok Kritis).
 
-```bash
-composer require laravel/boost --dev
+### 📈 Fase 3: Financial Insights
+- [ ] Laporan Laba/Rugi (Gross Profit vs Net Profit).
+- [ ] Filter performa penjualan berdasarkan periode waktu tertentu.
 
-php artisan boost:install
-```
+### ⚙️ Fase 4: Optimization
+- [ ] Integrasi Printer Thermal via USB/Bluetooth.
+- [ ] Sistem manajemen diskon (Persentase atau nominal tetap).
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## 👨‍💻 Author
+**Arif Juliawan**
+*Student ID: 055756684*
+*Sistem Informasi - Universitas Terbuka*
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+*Last Updated: 8 Mei 2026*
