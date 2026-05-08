@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AbsensiController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductController;
@@ -20,12 +21,10 @@ Route::get('/', function () {
 });
 
 // --- SEMUA RUTE DI BAWAH INI WAJIB LOGIN ---
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'check.store'])->group(function () {
 
     // Rute Dashboard
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Rute Setup Toko
     Route::get('/setup-toko', [StoreController::class, 'create'])->name('setup.toko');
@@ -42,6 +41,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Rute Absensi
     Route::get('/absensi', [AbsensiController::class, 'index'])->name('absensi.index');
+    Route::post('/absensi', [App\Http\Controllers\AbsensiController::class, 'store'])->name('absensi.store');
+
+    // Tarik Data CSV Absensi Karyawan
+    Route::get('/absensi/export', [App\Http\Controllers\AbsensiController::class, 'export'])->name('absensi.export');
 
     // Rute POS
     Route::get('/pos', function () {

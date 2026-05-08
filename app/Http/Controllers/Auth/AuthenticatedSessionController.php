@@ -33,7 +33,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Logika Redirect Berdasarkan role
+        if ($request->user()->role === 'owner') {
+            return redirect()->intended(route('dashboard'));
+        }
+        // Jika Kasir
+        return redirect()->intended(route('absensi.index'));
     }
 
     /**

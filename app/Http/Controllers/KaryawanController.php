@@ -64,6 +64,6 @@ class KaryawanController extends Controller
     public function destroy(User $karyawan)
     {
         $karyawan->delete();
-        return redirect()->back;
+        return redirect()->back()->with('message', 'Karyawan berhasil dihapus!');
     }
 }
