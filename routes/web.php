@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\AbsensiController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StoreController;
+use App\Http\Controllers\KaryawanController;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -29,14 +31,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/setup-toko', [StoreController::class, 'create'])->name('setup.toko');
     Route::post('/setup-toko', [StoreController::class, 'store'])->name('setup.toko.store');
 
-    // 1. Rute POS
+    // Rute Pengaturan Toko (Khusus Owner)
+    Route::get('/pengaturan', [StoreController::class, 'edit'])->name('store.edit');
+    Route::post('/pengaturan', [StoreController::class, 'update'])->name('store.update');
+
+    // Rute Karyawan
+    Route::get('/karyawan', [KaryawanController::class, 'index'])->name('karyawan.index');
+    Route::post('/karyawan', [KaryawanController::class, 'store'])->name('karyawan.store');
+    Route::delete('/karyawan/{karyawan}', [KaryawanController::class, 'destroy'])->name('karyawan.destroy');
+
+    // Rute Absensi
+    Route::get('/absensi', [AbsensiController::class, 'index'])->name('absensi.index');
+
+    // Rute POS
     Route::get('/pos', function () {
         return Inertia::render('Pos/Index', [
             'products' => Product::all()
         ]);
     })->name('pos');
 
-    // 2. Rute Checkout Transaksi
+    // Rute Checkout Transaksi
     Route::post('/pos/checkout', function (Request $request) {
         DB::transaction(function () use ($request) {
             $transaction = Transaction::create([
@@ -61,7 +75,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return redirect()->back();
     });
 
-    // 3. Rute Produk
+    // Rute Produk
     Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
     Route::post('/products/import', [ProductController::class, 'import'])->name('products.import');
     Route::resource('/products', ProductController::class);

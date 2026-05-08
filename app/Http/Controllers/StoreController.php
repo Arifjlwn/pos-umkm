@@ -48,4 +48,40 @@ class StoreController extends Controller
         // 5. Gas ke Kasir!
         return redirect()->route('pos');
     }
+
+    // Form Pengaturan Toko
+    public function edit(Request $request)
+    {
+        // Hanya Owner Yang bisa akses
+        if ($request->user()->role !== 'owner') {
+            abort(403, 'Akses Di Tolak.');
+        }
+        return Inertia::render('Store/Edit', [
+            'store' => $request->user()->store
+        ]);
+    }
+
+    // Proses Update Pengaturan Toko
+    public function update(Request $request)
+    {
+        if ($request->user()->role !== 'owner') {
+            abort(403, 'Akses Ditolak.');
+        }
+
+        $request->validate([
+            'nama_toko' => 'required|string|max:255',
+            'alamat_toko' => 'required|string',
+            'telepon' => 'nullable|string|max:20',
+            'fitur_opsional' => 'required|array',
+        ]);
+
+        $store = $request->user()->store;
+        $store->update([
+            'nama_toko' => $request->nama_toko,
+            'alamat_toko' => $request->alamat_toko,
+            'telepon' => $request->telepon,
+            'fitur_opsional' => $request->fitur_opsional,
+        ]);
+        return redirect()->back()->with('message', 'Pengaturan Toko Berhasil Diperbarui!');
+    }
 }

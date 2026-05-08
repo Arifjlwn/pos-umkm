@@ -65,6 +65,7 @@ const logout = () => {
             </div>
 
             <nav class="flex-1 px-4 py-6 space-y-2.5 overflow-y-auto custom-scrollbar">
+
                 <div class="text-xs font-black text-gray-400 uppercase tracking-widest px-4 mb-4">Menu Utama</div>
 
                 <Link
@@ -78,24 +79,49 @@ const logout = () => {
                 </Link>
 
                 <Link
-                    href="/products"
+                    v-if="$page.props.auth.store?.fitur_opsional?.includes('absensi')"
+                    href="/absensi"
                     @click="sidebarOpen = false"
                     class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all"
-                    :class="$page.url.startsWith('/products') ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'"
-                >
-                    <span class="text-xl">📦</span>
-                    Master Produk
-                </Link>
-
-                <Link
-                    v-if="$page.props.auth.store?.fitur_opsional?.includes('absensi')"
-                    href="#"
-                    @click.prevent="alert('Fitur Absensi belum dibuat ya Mas! 😁')"
-                    class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all text-gray-600 hover:bg-gray-50 hover:text-blue-600"
+                    :class="$page.url.startsWith('/absensi') ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'"
                 >
                     <span class="text-xl">⏱️</span>
                     Absen Karyawan
                 </Link>
+
+                <div v-if="$page.props.auth.user.role === 'owner'" class="pt-4 mt-4 border-t border-gray-100">
+                    <div class="text-xs font-black text-gray-400 uppercase tracking-widest px-4 mb-4">Administrasi Toko</div>
+
+                    <Link
+                        href="/products"
+                        @click="sidebarOpen = false"
+                        class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all"
+                        :class="$page.url.startsWith('/products') ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'"
+                    >
+                        <span class="text-xl">📦</span>
+                        Master Produk
+                    </Link>
+
+                    <Link
+                        href="/karyawan"
+                        @click="sidebarOpen = false"
+                        class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all"
+                        :class="$page.url.startsWith('/karyawan') ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'"
+                    >
+                        <span class="text-xl">👥</span>
+                        Manajemen Karyawan
+                    </Link>
+
+                    <Link
+                        href="/pengaturan"
+                        @click="sidebarOpen = false"
+                        class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all"
+                        :class="$page.url.startsWith('/pengaturan') ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'"
+                    >
+                        <span class="text-xl">⚙️</span>
+                        Pengaturan Toko
+                    </Link>
+                </div>
             </nav>
 
             <div class="p-5 border-t border-gray-100 bg-gray-50 shrink-0">

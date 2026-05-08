@@ -51,10 +51,10 @@ const submit = () => {
                 <form class="space-y-5" @submit.prevent="submit">
 
                     <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">Alamat Email</label>
-                        <input v-model="form.email" type="email" required autofocus autocomplete="username"
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Email Owner / NIK Karyawan</label>
+                        <input v-model="form.email" type="text" required autofocus autocomplete="username"
                             class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-medium"
-                            placeholder="nama@toko.com">
+                            placeholder="nama@toko.com atau 20260001">
                         <InputError class="mt-1" :message="form.errors.email" />
                     </div>
 

@@ -28,7 +28,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'email' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -42,11 +42,15 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        // CEK JENIS INPUT: Kalau formatnya email pakai kolom email, kalau angka pakai kolom nik
+        $loginField = filter_var($this->email, FILTER_VALIDATE_EMAIL) ? 'email' : 'nik';
+
+        // tembak ke database
+        if (! Auth::attempt([$loginField => $this->email, 'password' => $this->password], $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'email' => 'Kombinasi Email/NIK dan Kata Sandi salah.',
             ]);
         }
 
