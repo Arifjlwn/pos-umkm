@@ -20,6 +20,11 @@
         "vue": "^3.4.0"
     },
     "dependencies": {
+<<<<<<< HEAD
         "axios": "^1.16.0"
+=======
+        "chart.js": "^4.5.1",
+        "vue-chartjs": "^5.3.3"
+>>>>>>> fe5108ac44404475b1c66a1cb99fadaf9190e970
     }
 }
