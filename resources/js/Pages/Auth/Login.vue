@@ -1,100 +1,115 @@
+<template>
+    <div class="login-container">
+        <h2>Login POS UMKM</h2>
+
+        <form @submit.prevent="handleLogin">
+            <div class="form-group">
+                <label>Email / NIK Kasir</label>
+                <input
+                    type="text"
+                    v-model="identifier"
+                    placeholder="Masukkan Email atau NIK"
+                    required
+                />
+            </div>
+
+            <div class="form-group">
+                <label>Password</label>
+                <input
+                    type="password"
+                    v-model="password"
+                    placeholder="Masukkan Password"
+                    required
+                />
+            </div>
+
+            <button type="submit" :disabled="isLoading">
+                {{ isLoading ? 'Memeriksa...' : 'Masuk' }}
+            </button>
+
+            <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
+        </form>
+    </div>
+</template>
+
 <script setup>
-import Checkbox from '@/Components/Checkbox.vue';
-import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import api from '../../api.js'; // Panggil kurir Axios (Posisinya 2 folder di luar)
 
-defineProps({
-    canResetPassword: {
-        type: Boolean,
-    },
-    status: {
-        type: String,
-    },
-});
+// State (Wadah penampung inputan)
+const identifier = ref('');
+const password = ref('');
+const errorMessage = ref('');
+const isLoading = ref(false);
 
-const form = useForm({
-    email: '',
-    password: '',
-    remember: false,
-});
+// Fungsi saat tombol Masuk diklik
+const handleLogin = async () => {
+    isLoading.value = true;
+    errorMessage.value = '';
 
-const submit = () => {
-    form.post(route('login'), {
-        onFinish: () => form.reset('password'),
-    });
+    try {
+        // Tembak API Golang
+        const response = await api.post('/login', {
+            identifier: identifier.value,
+            password: password.value
+        });
+
+        // Kalau sukses, simpan tiket JWT ke brankas browser
+        const token = response.data.token;
+        localStorage.setItem('token', token);
+
+        // Pakai cara bawaan browser/Inertia untuk pindah halaman
+        window.location.href = '/dashboard';
+
+    } catch (error) {
+        // Tangkap pesan error dari Golang
+        if (error.response && error.response.data.error) {
+            errorMessage.value = error.response.data.error;
+        } else {
+            errorMessage.value = "Gagal terhubung ke server.";
+        }
+    } finally {
+        isLoading.value = false;
+    }
 };
 </script>
 
-<template>
-    <GuestLayout>
-        <Head title="Log in" />
-
-        <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
-            {{ status }}
-        </div>
-
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="email" value="Email" />
-
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    v-model="form.email"
-                    required
-                    autofocus
-                    autocomplete="username"
-                />
-
-                <InputError class="mt-2" :message="form.errors.email" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="current-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="mt-4 block">
-                <label class="flex items-center">
-                    <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600"
-                        >Remember me</span
-                    >
-                </label>
-            </div>
-
-            <div class="mt-4 flex items-center justify-end">
-                <Link
-                    v-if="canResetPassword"
-                    :href="route('password.request')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                >
-                    Forgot your password?
-                </Link>
-
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    Log in
-                </PrimaryButton>
-            </div>
-        </form>
-    </GuestLayout>
-</template>
+<style scoped>
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-family: sans-serif;
+}
+.form-group {
+    margin-bottom: 15px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+}
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+button:disabled {
+    background-color: #aaa;
+}
+.error-text {
+    color: red;
+    margin-top: 10px;
+    text-align: center;
+}
+</style>

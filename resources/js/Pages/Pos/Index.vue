@@ -1,15 +1,57 @@
 <script setup>
+
 import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import api from '../../api.js';
 
 // Fungsi Jam Realtime
 const currentTime = ref('');
 let timer;
 
-onMounted(() => {
-    if (searchInput.value) searchInput.value.focus();
+// State utama untuk keranjang, pembayaran, dan tampilan
+const products = ref([]);
+const isLoadingProducts = ref(true);
+const cart = ref([]);
+const heldOrders = ref([]);
+const payAmount = ref(0);
+const paymentMethod = ref('Cash')
+const showReceipt = ref(false);
+const showQrisModal = ref(false);
+const lastTransaction = ref(null);
 
+//Pencarian Produk & Barcode Scan
+const searchQuery = ref('');
+const searchInput = ref(null);
+
+// --- FUNGSI BARU: Tarik Data dari Golang ---
+const fetchProducts = async () => {
+    try {
+        const response = await api.get('/products');
+        // Petakan nama kolom Golang (nama_produk) ke nama variabel Vue Mas (name)
+        products.value = response.data.data.map(p => ({
+            id: p.id,
+            sku: p.sku || `SKU-${p.id}`,
+            name: p.nama_produk,
+            price: p.harga_jual,
+            stock: p.stok,
+            image: null
+        }));
+    } catch (error) {
+        console.error("Gagal narik produk:", error);
+        if (error.response && error.response.status === 401) {
+            window.location.href = '/login'; // Lempar ke login kalau tiket mati
+        }
+    } finally {
+        isLoadingProducts.value = false;
+    }
+};
+
+// Fokus ke input pencarian saat halaman dimuat
+onMounted(() => {
+    fetchProducts();
+
+    if (searchInput.value) searchInput.value.focus();
     // Jalankan Jam Setiap Detik
     timer = setInterval(() => {
         const now = new Date();
@@ -19,56 +61,32 @@ onMounted(() => {
         }).replace(/\//g, '.');
     }, 1000);
 });
+
 onUnmounted(() => {
     clearInterval(timer);
-});
-
-// Menerima data produk dari server
-const props = defineProps({
-    products: Array,
-});
-
-// State utama untuk keranjang, pembayaran, dan tampilan
-const cart = ref([]);
-const heldOrders = ref([]);
-const payAmount = ref(0);
-const paymentMethod = ref('Cash')
-const showReceipt = ref(false);
-const showQrisModal = ref(false);
-const lastTransaction = ref(null);
-
-
-//Pencarian Produk & Barcode Scan
-const searchQuery = ref('');
-const searchInput = ref(null);
-
-// Fokus ke input pencarian saat halaman dimuat
-onMounted(() => {
-    if (searchInput.value) {
-        searchInput.value.focus();
-    }
 });
 
 
 // Filter produk secara otomatis berdasarkan ketikan kasir
 const filteredProducts = computed(() => {
-    if (!searchQuery.value) return props.products;
+    if (!searchQuery.value) return products.value;
     const query = searchQuery.value.toLocaleLowerCase();
-    return props.products.filter(product =>
+    return products.value.filter(product =>
         product.name.toLowerCase().includes(query) ||
         (product.sku && product.sku.toLowerCase().includes(query))
     );
 });
 
+
 // Fungsi Otomatis oleh scanner barcode
 const handleBarcodeScan = () => {
     if (!searchQuery.value) return;
-
     const query = String(searchQuery.value).trim().toLowerCase();
 
     // cek apakah input cocok dengan SKU produk
     const exactMatch = props.products.find(p =>
         p.sku && String(p.sku).toLowerCase() === query);
+
     if (exactMatch) {
         addToCart(exactMatch); //masuk keranjang
         searchQuery.value = ''; // reset input
@@ -85,9 +103,17 @@ const handleBarcodeScan = () => {
 
 // Fungsi Keranjang
 const addToCart = (product) => {
+    if (product.stock <= 0) {
+        alert("Stok barang habis Bos!");
+        return;
+    }
     const existingItem = cart.value.find(item => item.id === product.id);
     if (existingItem) {
-        existingItem.qty++;
+        if (existingItem.qty < product.stock) {
+            existingItem.qty++;
+        } else {
+            alert("Kuantitas melebihi stok yang ada!");
+        }
     } else {
         cart.value.push({ id: product.id, name: product.name, price: product.price, qty: 1 });
     }
@@ -119,23 +145,23 @@ const clearCart = () => {
 // fungsi Hold Order
 const holdTransaction = () => {
     if (cart.value.length === 0) return;
-
     heldOrders.value.push({
         id: Date.now(),
         items: [...cart.value],
         time: new Date().toLocaleTimeString('id-ID'),
         total: totalBelanja.value
     });
-
     cart.value = [];
     payAmount.value = 0;
-    alert('Pesanan berhasil di-hold!');
 };
+
+
 
 const resumeOrder = (order) => {
     if (cart.value.length > 0 && !confirm('Keranjang saat ini akan diganti. Lanjutkan?')) return;
 
     cart.value = [...order.items];
+
     heldOrders.value = heldOrders.value.filter(h => h.id !== order.id);
 };
 
@@ -151,6 +177,7 @@ const kembalian = computed(() => {
 // Proses Bayar
 const setPaymentMethod = (method) => {
     paymentMethod.value = method;
+
     // Kalau non-tunai, uang bayar otomatis nge-pas dengan total belanja
     if (method !== 'Cash') {
         payAmount.value = totalBelanja.value;
@@ -159,36 +186,53 @@ const setPaymentMethod = (method) => {
     }
 };
 
-// Fungsi Eksekusi ke database (dipisah agar bisa dipanggil dari tombol tunai atau qris)
-const executeCheckout = () => {
-    // Hitung PPN Mundur (Include TAX 11%)
-    const dppAmount = Math.round(totalBelanja.value / 1.11);
-    const ppnAmount = totalBelanja.value - dppAmount;
 
-    router.post('/pos/checkout', {
-        cart: cart.value,
-        total_price: totalBelanja.value,
-        pay_amount: payAmount.value,
-        payment_method: paymentMethod.value
-    }, {
-        onSuccess: () => {
-            lastTransaction.value = {
-                cart: [...cart.value],
-                total: totalBelanja.value,
-                pay: payAmount.value,
-                return: kembalian.value,
-                method: paymentMethod.value,
-                dpp: dppAmount,
-                ppn: ppnAmount,
-                date: new Date().toLocaleString('id-ID', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '.')
-            };
-            showQrisModal.value = false;
-            showReceipt.value = true;
-            cart.value = [];
-            payAmount.value = 0;
-            paymentMethod.value = 'Cash';
+
+// Fungsi Eksekusi ke database (dipisah agar bisa dipanggil dari tombol tunai atau qris)
+const executeCheckout = async() => {
+    const payloadItems = cart.value.map(item => ({
+        product_id: item.id,
+        kuantitas: item.qty
+    }));
+
+    try {
+        // Tembak mesin golang
+        const response = await api.post('/checkout', {
+            items: payloadItems,
+            nominal_bayar: payAmount.value
+        });
+
+        // Ambil data respon dari Golang
+        // Hitung PPN Mundur (Include TAX 11%)
+        const dppAmount = Math.round(totalBelanja.value / 1.11);
+        const ppnAmount = totalBelanja.value - dppAmount;
+
+        lastTransaction.value = {
+            invoice: response.data.invoice, // No Invoice Asli dari DB!
+            cart: [...cart.value],
+            total: response.data.tagihan,   // Total fix setelah diolah Golang
+            pay: payAmount.value,
+            return: response.data.kembali,  // Kembalian fix dari Golang
+            method: paymentMethod.value,
+            dpp: dppAmount,
+            ppn: ppnAmount,
+            date: new Date().toLocaleString('id-ID', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '.')
+        };
+        showQrisModal.value = false;
+        showReceipt.value = true;
+        cart.value = [];
+        payAmount.value = 0;
+        paymentMethod.value = 'Cash';
+
+        // Refresh katalog barang biar stok terbaru langsung ngesync
+        fetchProducts();
+    } catch (error) {
+        if (error.response && error.response.data.error) {
+            alert("Transaksi Gagal: " + error.response.data.error);
+        } else {
+            alert("Koneksi ke server terputus");
         }
-    });
+    }
 };
 
 // Proses bayar Utama
@@ -201,10 +245,13 @@ const formattedPayAmount = computed({
     set(newValue) {
         // Saat kasir ngetik: bersihkan semua huruf/titik, sisakan angka murni saja
         const cleanValue = String(newValue).replace(/\D/g, '');
+
         // Simpan angka murninya ke variabel asli payAmount
         payAmount.value = cleanValue ? parseInt(cleanValue, 10) : 0;
     }
 });
+
+
 
 const processCheckout = () => {
     if (payAmount.value < totalBelanja.value) {
@@ -219,11 +266,13 @@ const processCheckout = () => {
         // Proses checkout langsung untuk Cash atau Debit
         executeCheckout();
     }
+
 };
 
 const printReceipt = () => {
     window.print();
 };
+
 </script>
 
 <template>
@@ -373,7 +422,7 @@ const printReceipt = () => {
 
                             <div class="flex justify-between items-center mb-2">
                                 <span class="font-semibold text-sm text-gray-600">Nominal Bayar</span>
-                                <input type="text" v-model.number="formattedPayAmount" :disabled="paymentMethod !== 'Cash'" :class="paymentMethod !== 'Cash' ? 'bg-gray-100 text-gray-500' : 'bg-white text-gray-800 focus:ring-blue-500 focus:border-blue-500'" class="w-32 text-right text-sm font-bold border-gray-300 rounded-md p-1 transition-colors" placeholder="0">
+                                <input type="text" v-model="formattedPayAmount" :disabled="paymentMethod !== 'Cash'" :class="paymentMethod !== 'Cash' ? 'bg-gray-100 text-gray-500' : 'bg-white text-gray-800 focus:ring-blue-500 focus:border-blue-500'" class="w-32 text-right text-sm font-bold border-gray-300 rounded-md p-1 transition-colors" placeholder="0">
                             </div>
 
                             <div class="flex justify-between items-center mb-4 pt-2 border-t border-dashed border-gray-300">
